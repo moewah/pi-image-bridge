@@ -205,7 +205,7 @@ export function hashImage(img: ImageContent): string {
 		.slice(0, 16);
 }
 
-/** Parse dimensions from base64 image data (PNG / JPEG / GIF / WebP / AVIF); null on failure */
+/** Parse dimensions from base64 image data (PNG / JPEG / GIF / WebP); null on failure */
 export function parseImageSize(img: ImageContent): { width: number; height: number } | null {
 	try {
 		const buf = Buffer.from(img.data, "base64");
@@ -231,16 +231,6 @@ export function parseImageSize(img: ImageContent): { width: number; height: numb
 			if (vp8 === "VP8L" && buf.length >= 25) {
 				const b = buf.readUInt32LE(21);
 				return { width: (b & 0x3fff) + 1, height: ((b >> 14) & 0x3fff) + 1 };
-			}
-		}
-		// AVIF: ISO BMFF container; size lives in the ispe box (image spatial extents)
-		// of the meta chain
-		if (buf.length >= 12 && buf.toString("ascii", 4, 8) === "ftyp" && buf.toString("ascii", 8, 12) === "avif") {
-			// Scan for ispe: size(4) + "ispe"(4) + version/flags(4) + width(4) + height(4)
-			for (let i = 0; i + 16 <= buf.length; i += 4) {
-				if (buf.toString("ascii", i + 4, i + 8) === "ispe") {
-					return { width: buf.readUInt32BE(i + 12), height: buf.readUInt32BE(i + 16) };
-				}
 			}
 		}
 		// JPEG: scan for SOF markers
@@ -279,7 +269,6 @@ export function sniffMime(buf: Buffer): string {
 	if (buf.length >= 3 && buf[0] === 0xff && buf[1] === 0xd8 && buf[2] === 0xff) return "image/jpeg";
 	if (buf.length >= 6 && (buf.toString("ascii", 0, 6) === "GIF87a" || buf.toString("ascii", 0, 6) === "GIF89a")) return "image/gif";
 	if (buf.length >= 12 && buf.toString("ascii", 0, 4) === "RIFF" && buf.toString("ascii", 8, 12) === "WEBP") return "image/webp";
-	if (buf.length >= 12 && buf.toString("ascii", 4, 8) === "ftyp" && buf.toString("ascii", 8, 12) === "avif") return "image/avif";
 	return "image/jpeg";
 }
 
