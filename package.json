@@ -1,0 +1,37 @@
+{
+  "name": "@moewah-dev/pi-image-bridge",
+  "version": "0.1.0",
+  "description": "Vision bridge for pi: describes images for text-only main models via a configurable vision model chain (input attachments and tool-result images).",
+  "keywords": ["pi-package", "pi", "vision", "image", "multimodal"],
+  "author": "moewah",
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
+  "type": "module",
+  "files": [
+    "extensions/",
+    "README.md",
+    "LICENSE"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/moewah/pi-image-bridge.git"
+  },
+  "homepage": "https://github.com/moewah/pi-image-bridge#readme",
+  "bugs": {
+    "url": "https://github.com/moewah/pi-image-bridge/issues"
+  },
+  "scripts": {
+    "check": "pi --no-extensions -e ./extensions/pi-image-bridge.ts --list-models __pi_image_bridge_load_check__",
+    "pack:dry": "npm pack --dry-run"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-ai": "*",
+    "@earendil-works/pi-coding-agent": "*",
+    "@earendil-works/pi-tui": "*"
+  },
+  "pi": {
+    "extensions": ["./extensions"]
+  }
+}
