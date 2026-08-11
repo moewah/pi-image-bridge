@@ -1,6 +1,6 @@
 {
   "name": "@moewah-dev/pi-image-bridge",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Vision bridge for pi: describes images for text-only main models via a configurable vision model chain (input attachments and tool-result images).",
   "keywords": ["pi-package", "pi", "vision", "image", "multimodal"],
   "author": "moewah",
