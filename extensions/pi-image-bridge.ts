@@ -21,9 +21,8 @@
  *   - force mode: use vision assist even when the main model supports images
  *   - maxImages cap: prevents blowing up the context with too many images
  *
- * Config: ~/.pi/agent/pi-image-bridge.json (global, auto-created on first run)
- *         <project>/.pi/pi-image-bridge.json (project, deep-merged over global)
- * Commands: /image-bridge           show effective config
+ * Config: ~/.pi/agent/pi-image-bridge.json (auto-created on first run)
+ * Commands: /image-bridge           show current config
  *           /image-bridge toggle    toggle vision assist
  *           /image-bridge stats     show vision call stats for this session
  *           /image-bridge config    interactively edit the global config
@@ -33,7 +32,6 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { createHash } from "node:crypto";
 import {
-	CONFIG_DIR_NAME,
 	getAgentDir,
 	type ExtensionAPI,
 	type ExtensionContext,
@@ -111,24 +109,8 @@ function writeJsonFile(file: string, data: unknown): void {
 	fs.writeFileSync(file, JSON.stringify(data, null, 2) + "\n");
 }
 
-export function deepMerge<T>(base: T, override: unknown): T {
-	if (override === null || typeof override !== "object" || Array.isArray(override)) {
-		return (override === undefined ? base : override) as T;
-	}
-	const result: Record<string, unknown> = { ...((base ?? {}) as Record<string, unknown>) };
-	for (const [key, value] of Object.entries(override as Record<string, unknown>)) {
-		result[key] = deepMerge(result[key], value);
-	}
-	return result as T;
-}
-
-export function loadConfig(cwd: string): AgentModelsConfig {
-	const globalFile = path.join(getAgentDir(), CONFIG_FILENAME);
-	const projectFile = path.join(cwd, CONFIG_DIR_NAME, CONFIG_FILENAME);
-	return deepMerge<AgentModelsConfig>(
-		(readJsonFile(globalFile) ?? {}) as AgentModelsConfig,
-		readJsonFile(projectFile) ?? {},
-	);
+export function loadConfig(): AgentModelsConfig {
+	return (readJsonFile(path.join(getAgentDir(), CONFIG_FILENAME)) ?? {}) as AgentModelsConfig;
 }
 
 // ---------------------------------------------------------------------------
@@ -527,21 +509,15 @@ function formatConfig(vision: VisionConfig | undefined): string {
 	return lines.join("\n");
 }
 
-/** toggle writes to the project config first (if it overrides enabled), else global */
+/** Toggle vision assist in the global config */
 function toggleEnabled(ctx: ExtensionContext): boolean {
-	const projectFile = path.join(ctx.cwd, CONFIG_DIR_NAME, CONFIG_FILENAME);
-	const projectConfig = readJsonFile(projectFile);
-	const useProject =
-		projectConfig &&
-		typeof (projectConfig.vision as VisionConfig | undefined)?.enabled === "boolean";
-	const file = useProject ? projectFile : path.join(getAgentDir(), CONFIG_FILENAME);
-
+	const file = path.join(getAgentDir(), CONFIG_FILENAME);
 	const config = (readJsonFile(file) ?? {}) as AgentModelsConfig;
 	const current = config.vision?.enabled ?? false;
 	const next = !current;
 	config.vision = { ...(config.vision ?? {}), enabled: next };
 	writeJsonFile(file, config);
-	ctx.ui.notify(`pi-image-bridge: vision assist ${next ? "enabled" : "disabled"} (${useProject ? "project config" : "global config"})`, "info");
+	ctx.ui.notify(`pi-image-bridge: vision assist ${next ? "enabled" : "disabled"} (global config)`, "info");
 	return next;
 }
 
@@ -644,7 +620,7 @@ export default function (pi: ExtensionAPI): void {
 		const images = event.images;
 		if (!images || images.length === 0) return { action: "continue" };
 
-		const config = loadConfig(ctx.cwd);
+		const config = loadConfig();
 		const vision = config.vision;
 		if (!vision || !vision.enabled) return { action: "continue" };
 
@@ -675,7 +651,7 @@ export default function (pi: ExtensionAPI): void {
 		const images = event.content.filter((c): c is ImageContent => c.type === "image");
 		if (images.length === 0) return;
 
-		const config = loadConfig(ctx.cwd);
+		const config = loadConfig();
 		const vision = config.vision;
 		if (!vision || !vision.enabled) return;
 
@@ -730,7 +706,7 @@ export default function (pi: ExtensionAPI): void {
 			switch (sub) {
 				case "":
 					ctx.ui.notify(
-						`${formatConfig(loadConfig(ctx.cwd).vision)}\nconfig file: ${path.join(getAgentDir(), CONFIG_FILENAME)}`,
+						`${formatConfig(loadConfig().vision)}\nconfig file: ${path.join(getAgentDir(), CONFIG_FILENAME)}`,
 						"info",
 					);
 					break;
